@@ -1,10 +1,14 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module System.Directory.Glob (glob) where
+module System.Directory.Glob where
 
-import Foreign (alloca, peekArray)
-import Foreign.C.String (CString, peekCString, withCString)
+import Control.Exception (bracket)
+import Control.Monad (unless, forM_)
+import Data.Bits ((.|.))
+import Data.List (foldl')
+import Foreign (alloca, free, peekArray)
+import Foreign.C.String (CString, newCString, peekCString, withCString)
 import Foreign.C.Types (CInt(..))
 import Foreign.Ptr (Ptr(..), nullPtr)
 import Foreign.Storable (Storable(..))
@@ -12,10 +16,11 @@ import Foreign.Storable (Storable(..))
 #include <glob.h>
 
 
-glob :: String -> IO [FilePath]
-glob pat = withCString pat $ \pat' ->
+-- Finds pathnames matching a pattern.
+glob :: [GlobFlag] -> String -> IO [FilePath]
+glob flags pat = withCString pat $ \pat' ->
     alloca $ \globPtr -> do
-        errCode <- c_glob pat' 0 nullPtr globPtr
+        errCode <- c_glob pat' (orFlags flags) nullPtr globPtr
 
         res <- if errCode == 0 || errCode == (#const GLOB_NOMATCH)
                   then do
@@ -25,6 +30,31 @@ glob pat = withCString pat $ \pat' ->
 
         c_globfree globPtr
         return res
+
+-- Like glob, but for multiple patterns.
+-- This function only marshals data once, making it more efficient than multiple glob calls.
+globMany :: [GlobFlag] -> [String] -> IO [FilePath]
+globMany flags pats =
+    let flags' = orFlags $ globAppend : flags
+    in  alloca $ \globPtr -> do
+            -- Call glob for each pattern
+            forM_ pats $ \p -> withCString p $ \pat' -> do
+                putStrLn p
+                errCode <- c_glob pat' flags' nullPtr globPtr
+
+                unless (errCode == 0 || errCode == (#const GLOB_NOMATCH))
+                    (error $ "glob failed with exit code: " ++ show errCode)
+
+            -- Unpack paths
+            CGlob strs <- peek globPtr
+            mapM peekCString strs
+
+
+-- Helper function that ORs the flags together.
+orFlags :: [GlobFlag] -> CInt
+orFlags = foldl' (.|.) 0 . map unwrapFlag where
+    unwrapFlag (GlobFlag f) = f
+
 
 
 {-
@@ -45,6 +75,10 @@ instance Storable CGlob where
         return $ CGlob pathV
 
     poke _ _ = error "Poke unsupported for CGlob"
+
+-- Control flags
+data GlobFlag = GlobFlag CInt
+#enum GlobFlag, GlobFlag, GLOB_MARK, GLOB_NOSORT, GLOB_APPEND, GLOB_NOESCAPE
 
 -- We don't use this, so its type doesn't matter
 type C_ErrorFunc = Ptr ()
