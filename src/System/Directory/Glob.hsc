@@ -1,5 +1,4 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module System.Directory.Glob where
 
@@ -16,45 +15,56 @@ import Foreign.Storable (Storable(..))
 #include <glob.h>
 
 
+-- Each call to glob() involves String marshalling and return code checking
+c_glob' :: Ptr CGlob -> CInt -> String -> IO ()
+c_glob' globPtr f p = withCString p $ \p' -> do
+    errCode <- c_glob p' f nullPtr globPtr
+
+    unless (errCode == 0 || errCode == (#const GLOB_NOMATCH))
+        (error $ "glob failed with exit code: " ++ show errCode)
+
 -- Finds pathnames matching a pattern.
 glob :: [GlobFlag] -> String -> IO [FilePath]
-glob flags pat = withCString pat $ \pat' ->
-    alloca $ \globPtr -> do
-        errCode <- c_glob pat' (orFlags flags) nullPtr globPtr
+glob flags pat = alloca $ \globPtr -> do
+    -- Call glob
+    c_glob' globPtr (orFlags flags) pat
 
-        res <- if errCode == 0 || errCode == (#const GLOB_NOMATCH)
-                  then do
-                      CGlob strs <- peek globPtr
-                      mapM peekCString strs
-                  else error $ "glob failed with exit code: " ++ show errCode
+    -- Unpack results
+    CGlob strs <- peek globPtr
+    res <- mapM peekCString strs
 
-        c_globfree globPtr
-        return res
+    -- Cleanup
+    c_globfree globPtr
+    return res
 
 -- Like glob, but for multiple patterns.
 -- This function only marshals data once, making it more efficient than multiple glob calls.
 globMany :: [GlobFlag] -> [String] -> IO [FilePath]
-globMany flags pats =
-    let flags' = orFlags $ globAppend : flags
+globMany _ [] = return []       -- Need to handle this explicitly, or we'll free an uninitiallized glob_t.
+globMany flags (p0:ps) =
+    let flags' = orFlags flags
     in  alloca $ \globPtr -> do
-            -- Call glob for each pattern
-            forM_ pats $ \p -> withCString p $ \pat' -> do
-                putStrLn p
-                errCode <- c_glob pat' flags' nullPtr globPtr
+            -- First call to glob must be *without* GLOB_APPEND
+            let flags' = orFlags flags
+            c_glob' globPtr flags' p0
 
-                unless (errCode == 0 || errCode == (#const GLOB_NOMATCH))
-                    (error $ "glob failed with exit code: " ++ show errCode)
+            -- Call glob for the remaining patterns with GLOB_APPEND
+            forM_ ps . c_glob' globPtr $ flags' .|. unwrapFlag globAppend
 
             -- Unpack paths
             CGlob strs <- peek globPtr
-            mapM peekCString strs
+            res <- mapM peekCString strs
 
+            -- Cleanup
+            c_globfree globPtr
+            return res
 
 -- Helper function that ORs the flags together.
 orFlags :: [GlobFlag] -> CInt
-orFlags = foldl' (.|.) 0 . map unwrapFlag where
-    unwrapFlag (GlobFlag f) = f
+orFlags = foldl' (.|.) 0 . map unwrapFlag
 
+unwrapFlag :: GlobFlag -> CInt
+unwrapFlag (GlobFlag f) = f
 
 
 {-
