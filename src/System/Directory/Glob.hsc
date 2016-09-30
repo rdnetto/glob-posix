@@ -1,6 +1,21 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module System.Directory.Glob where
+module System.Directory.Glob (
+    glob,
+    globMany,
+    globAppend,
+    globBrace,
+    globErr,
+    globMark,
+    globNoCheck,
+    globNoEscape,
+    globNoMagic,
+    globNoSort,
+    globOnlyDir,
+    globPeriod,
+    globTilde,
+    globTildeCheck
+    ) where
 
 import Control.Exception (bracket)
 import Control.Monad (unless, forM_)
@@ -88,7 +103,18 @@ instance Storable CGlob where
 
 -- Control flags
 data GlobFlag = GlobFlag CInt
-#enum GlobFlag, GlobFlag, GLOB_MARK, GLOB_NOSORT, GLOB_APPEND, GLOB_NOESCAPE
+#enum GlobFlag, GlobFlag, GLOB_APPEND
+#enum GlobFlag, GlobFlag, GLOB_BRACE
+#enum GlobFlag, GlobFlag, GLOB_ERR
+#enum GlobFlag, GlobFlag, GLOB_MARK
+#enum GlobFlag, GlobFlag, globNoCheck  = GLOB_NOCHECK
+#enum GlobFlag, GlobFlag, globNoEscape = GLOB_NOESCAPE
+#enum GlobFlag, GlobFlag, globNoMagic  = GLOB_NOMAGIC
+#enum GlobFlag, GlobFlag, globNoSort   = GLOB_NOSORT
+#enum GlobFlag, GlobFlag, globOnlyDir  = GLOB_ONLYDIR
+#enum GlobFlag, GlobFlag, GLOB_PERIOD
+#enum GlobFlag, GlobFlag, GLOB_TILDE
+#enum GlobFlag, GlobFlag, GLOB_TILDE_CHECK
 
 -- We don't use this, so its type doesn't matter
 type C_ErrorFunc = Ptr ()
