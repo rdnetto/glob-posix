@@ -5,7 +5,6 @@ module System.Directory.Glob (
     globMany,
     globAppend,
     globBrace,
-    globErr,
     globMark,
     globNoCheck,
     globNoEscape,
@@ -105,7 +104,6 @@ instance Storable CGlob where
 data GlobFlag = GlobFlag CInt
 #enum GlobFlag, GlobFlag, GLOB_APPEND
 #enum GlobFlag, GlobFlag, GLOB_BRACE
-#enum GlobFlag, GlobFlag, GLOB_ERR
 #enum GlobFlag, GlobFlag, GLOB_MARK
 #enum GlobFlag, GlobFlag, globNoCheck  = GLOB_NOCHECK
 #enum GlobFlag, GlobFlag, globNoEscape = GLOB_NOESCAPE

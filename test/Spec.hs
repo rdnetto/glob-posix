@@ -1,0 +1,95 @@
+import Control.Exception (bracket_)
+import System.Directory
+import System.FilePath ((</>))
+import System.IO (IOMode(..), withFile)
+import System.Posix.User
+import Test.Tasty
+import Test.Tasty.HUnit
+
+import System.Directory.Glob
+
+
+main :: IO ()
+main = do
+    putStrLn ""
+    tmp <- getTemporaryDirectory
+
+    defaultMain $ testGroup "Tests" [
+
+        testCase "Basic case" $
+            glob [] "/usr/bin" !@?= ["/usr/bin"],
+
+        testCase "Non-existant path" $
+            glob [] "/foo" !@?= [],
+
+        testCase "globMany" . withTempFile "foo" $ \f1 ->
+            withTempFile "bar" $ \f2 ->
+                globMany [] [tmp </> "foo", tmp </> "bar"] !@?= [f1, f2],
+
+        testCase "GLOB_MARK" $
+            glob [globMark] "/usr/bin" !@?= ["/usr/bin/"],
+
+        testCase "GLOB_NOCHECK" $
+            glob [globNoCheck] "/foo" !@?= ["/foo"],
+
+        testCase "GLOB_NOMAGIC" $
+            glob [globNoMagic] "/foo" !@?= ["/foo"],
+
+        testCase "GLOB_ESCAPE" . withTempFile "a?b" $ \f ->
+            glob [] (tmp </> "a\\?b") !@?= [f],
+
+        testCase "GLOB_NOESCAPE" . withTempFile "a\\?b" $ \f ->
+            glob [globNoEscape] (tmp </> "a\\?b") !@?= [f],
+
+        testCase "GLOB_PERIOD" . withTempFile ".ab" $ \f -> do
+            glob []           (tmp </> "?ab") !@?= []
+            glob [globPeriod] (tmp </> "?ab") !@?= [f],
+
+        testCase "GLOB_BRACE" . withTempFile "foo" $ \f1 ->
+            withTempFile "far" $ \f2 -> do
+                glob []          (tmp </> "f{oo,ar}") !@?= []
+                glob [globBrace] (tmp </> "f{oo,ar}") !@?= [f1, f2],
+
+        testCase "GLOB_TILDE" $ do
+            h <- getHomeDirectory
+            user <- getUserName
+            glob []          ('~':user) !@?= []
+            glob [globTilde] ('~':user) !@?= [h]
+
+        ]
+
+
+-- Convenience operator that eliminates the need to bind the actual result before asserting it is equal to the expected result
+(!@?=) :: (Eq a, Show a) => IO a -> a -> Assertion
+(!@?=) x y = do
+    x' <- x
+    x' @?= y
+
+-- Deterministic temp file creation & deletion
+withTempFile :: FilePath -> (FilePath -> IO a) -> IO a
+withTempFile f cb = do
+    d <- getTemporaryDirectory
+    let f' = d </> f
+    let createFile fp = withFile fp WriteMode (\_ -> return ())
+
+    bracket_
+        (createFile f')
+        (removeFile f')
+        (cb f')
+
+-- Creates a temporary directory that we can't read from.
+-- Used for testing error handling.
+withUnreadableDir :: (FilePath -> IO a) -> IO a
+withUnreadableDir cb = do
+    fp <- (</> "foo") <$> getTemporaryDirectory
+
+    bracket_
+        (createDirectory fp >> setPermissions fp emptyPermissions)
+        (setPermissions fp emptyPermissions {writable = True} >> removeDirectory fp)
+        (cb fp)
+
+-- Gets the username of the current user
+-- We can't use getLoginName here because it requires a controlling tty
+getUserName :: IO String
+getUserName = userName <$> (getUserEntryForID =<< getEffectiveUserID)
+
