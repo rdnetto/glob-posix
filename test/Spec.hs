@@ -14,13 +14,13 @@ import System.Directory.Glob.GNU
 
 main :: IO ()
 main = do
-    putStrLn ""
+    putStrLn $ "\nRunning on " ++ os
     tmp <- getTemporaryDirectory
 
     -- We only expect Linux to have GNU extensions
     let gnuHandling = if os == "linux"
                          then id
-                         else expectFail
+                         else ignoreTest
 
     defaultMain $ testGroup "Tests" [
         testGroup "POSIX Functionality" (posixTests tmp),
