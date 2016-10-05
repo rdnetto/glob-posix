@@ -3,17 +3,12 @@
 module System.Directory.Glob (
     glob,
     globMany,
+    -- Only export standard flags by default
     globAppend,
-    globBrace,
     globMark,
     globNoCheck,
     globNoEscape,
-    globNoMagic,
-    globNoSort,
-    globOnlyDir,
-    globPeriod,
-    globTilde,
-    globTildeCheck
+    globNoSort
     ) where
 
 import Control.Exception (bracket)
@@ -26,6 +21,7 @@ import Foreign.C.Types (CInt(..))
 import Foreign.Ptr (Ptr(..), nullPtr)
 import Foreign.Storable (Storable(..))
 
+import System.Directory.Glob.Internal
 #include <glob.h>
 
 
@@ -99,20 +95,6 @@ instance Storable CGlob where
         return $ CGlob pathV
 
     poke _ _ = error "Poke unsupported for CGlob"
-
--- Control flags
-data GlobFlag = GlobFlag CInt
-#enum GlobFlag, GlobFlag, GLOB_APPEND
-#enum GlobFlag, GlobFlag, GLOB_BRACE
-#enum GlobFlag, GlobFlag, GLOB_MARK
-#enum GlobFlag, GlobFlag, globNoCheck  = GLOB_NOCHECK
-#enum GlobFlag, GlobFlag, globNoEscape = GLOB_NOESCAPE
-#enum GlobFlag, GlobFlag, globNoMagic  = GLOB_NOMAGIC
-#enum GlobFlag, GlobFlag, globNoSort   = GLOB_NOSORT
-#enum GlobFlag, GlobFlag, globOnlyDir  = GLOB_ONLYDIR
-#enum GlobFlag, GlobFlag, GLOB_PERIOD
-#enum GlobFlag, GlobFlag, GLOB_TILDE
-#enum GlobFlag, GlobFlag, GLOB_TILDE_CHECK
 
 -- We don't use this, so its type doesn't matter
 type C_ErrorFunc = Ptr ()

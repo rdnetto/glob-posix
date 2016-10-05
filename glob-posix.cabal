@@ -14,7 +14,9 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     System.Directory.Glob
+  exposed-modules:     System.Directory.Glob,
+                       System.Directory.Glob.GNU
+  other-modules:       System.Directory.Glob.Internal
   build-depends:       base >= 4.7 && < 5
   default-language:    Haskell2010
 
@@ -27,6 +29,7 @@ test-suite glob-posix-test
                        filepath,
                        glob-posix,
                        tasty,
+                       tasty-expected-failure,
                        tasty-hunit,
                        unix
   default-language:    Haskell2010

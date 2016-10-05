@@ -1,12 +1,15 @@
 import Control.Exception (bracket_)
 import System.Directory
 import System.FilePath ((</>))
+import System.Info (os)
 import System.IO (IOMode(..), withFile)
 import System.Posix.User
 import Test.Tasty
+import Test.Tasty.ExpectedFailure
 import Test.Tasty.HUnit
 
 import System.Directory.Glob
+import System.Directory.Glob.GNU
 
 
 main :: IO ()
@@ -14,49 +17,64 @@ main = do
     putStrLn ""
     tmp <- getTemporaryDirectory
 
+    -- We only expect Linux to have GNU extensions
+    let gnuHandling = if os == "linux"
+                         then id
+                         else expectFail
+
     defaultMain $ testGroup "Tests" [
-
-        testCase "Basic case" $
-            glob [] "/usr/bin" !@?= ["/usr/bin"],
-
-        testCase "Non-existant path" $
-            glob [] "/foo" !@?= [],
-
-        testCase "globMany" . withTempFile "foo" $ \f1 ->
-            withTempFile "bar" $ \f2 ->
-                globMany [] [tmp </> "foo", tmp </> "bar"] !@?= [f1, f2],
-
-        testCase "GLOB_MARK" $
-            glob [globMark] "/usr/bin" !@?= ["/usr/bin/"],
-
-        testCase "GLOB_NOCHECK" $
-            glob [globNoCheck] "/foo" !@?= ["/foo"],
-
-        testCase "GLOB_NOMAGIC" $
-            glob [globNoMagic] "/foo" !@?= ["/foo"],
-
-        testCase "GLOB_ESCAPE" . withTempFile "a?b" $ \f ->
-            glob [] (tmp </> "a\\?b") !@?= [f],
-
-        testCase "GLOB_NOESCAPE" . withTempFile "a\\?b" $ \f ->
-            glob [globNoEscape] (tmp </> "a\\?b") !@?= [f],
-
-        testCase "GLOB_PERIOD" . withTempFile ".ab" $ \f -> do
-            glob []           (tmp </> "?ab") !@?= []
-            glob [globPeriod] (tmp </> "?ab") !@?= [f],
-
-        testCase "GLOB_BRACE" . withTempFile "foo" $ \f1 ->
-            withTempFile "far" $ \f2 -> do
-                glob []          (tmp </> "f{oo,ar}") !@?= []
-                glob [globBrace] (tmp </> "f{oo,ar}") !@?= [f1, f2],
-
-        testCase "GLOB_TILDE" $ do
-            h <- getHomeDirectory
-            user <- getUserName
-            glob []          ('~':user) !@?= []
-            glob [globTilde] ('~':user) !@?= [h]
-
+        testGroup "POSIX Functionality" (posixTests tmp),
+        gnuHandling $ testGroup "GNU Extensions" (gnuTests tmp)
         ]
+
+posixTests :: FilePath -> [TestTree]
+posixTests tmp = [
+    testCase "Basic case" $
+        glob [] "/usr/bin" !@?= ["/usr/bin"],
+
+    testCase "Non-existant path" $
+        glob [] "/foo" !@?= [],
+
+    testCase "globMany" . withTempFile "foo" $ \f1 ->
+        withTempFile "bar" $ \f2 ->
+            globMany [] [tmp </> "foo", tmp </> "bar"] !@?= [f1, f2],
+
+    testCase "GLOB_MARK" $
+        glob [globMark] "/usr/bin" !@?= ["/usr/bin/"],
+
+    testCase "GLOB_NOCHECK" $
+        glob [globNoCheck] "/foo" !@?= ["/foo"],
+
+    testCase "GLOB_ESCAPE" . withTempFile "a?b" $ \f ->
+        glob [] (tmp </> "a\\?b") !@?= [f],
+
+    testCase "GLOB_NOESCAPE" . withTempFile "a\\?b" $ \f ->
+        glob [globNoEscape] (tmp </> "a\\?b") !@?= [f]
+
+    ]
+
+gnuTests :: FilePath -> [TestTree]
+gnuTests tmp = [
+    testCase "GLOB_NOMAGIC" $
+        glob [globNoMagic] "/foo" !@?= ["/foo"],
+
+
+    testCase "GLOB_PERIOD" . withTempFile ".ab" $ \f -> do
+        glob []           (tmp </> "?ab") !@?= []
+        glob [globPeriod] (tmp </> "?ab") !@?= [f],
+
+    testCase "GLOB_BRACE" . withTempFile "foo" $ \f1 ->
+        withTempFile "far" $ \f2 -> do
+            glob []          (tmp </> "f{oo,ar}") !@?= []
+            glob [globBrace] (tmp </> "f{oo,ar}") !@?= [f1, f2],
+
+    testCase "GLOB_TILDE" $ do
+        h <- getHomeDirectory
+        user <- getUserName
+        glob []          ('~':user) !@?= []
+        glob [globTilde] ('~':user) !@?= [h]
+
+    ]
 
 
 -- Convenience operator that eliminates the need to bind the actual result before asserting it is equal to the expected result
