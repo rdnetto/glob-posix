@@ -13,6 +13,9 @@ cache:
   - $HOME/.cabal
   - $HOME/.stack
 
+matrix:
+  include:
+
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
   - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
