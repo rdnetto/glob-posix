@@ -1,10 +1,20 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
+{-|
+Module      : System.Directory.Glob
+Copyright   : (c) Reuben D'Netto 2016
+License     : Apache 2.0
+Maintainer  : rdnetto@gmail.com
+Portability : POSIX
+
+This module provides a wrapper around the <https://linux.die.net/man/3/glob glob(3)> C function, which finds file paths matching a given pattern.
+All of the standard flags are supported, though GNU extensions are contained in the "System.Directory.Glob.GNU" module to encourage portability.
+-}
 module System.Directory.Glob (
     glob,
     globMany,
+    GlobFlag,
     -- Only export standard flags by default
-    globAppend,
     globMark,
     globNoCheck,
     globNoEscape,
@@ -33,8 +43,10 @@ c_glob' globPtr f p = withCString p $ \p' -> do
     unless (errCode == 0 || errCode == (#const GLOB_NOMATCH))
         (error $ "glob failed with exit code: " ++ show errCode)
 
--- Finds pathnames matching a pattern.
-glob :: [GlobFlag] -> String -> IO [FilePath]
+-- | Finds pathnames matching a pattern. e.g @foo*@, @prog_v?@, @ba[zr]@, etc.
+glob :: [GlobFlag]      -- ^ A list of control flags to apply.
+     -> String          -- ^ The pattern.
+     -> IO [FilePath]   -- ^ The paths matching the pattern.
 glob flags pat = alloca $ \globPtr -> do
     -- Call glob
     c_glob' globPtr (orFlags flags) pat
@@ -47,9 +59,11 @@ glob flags pat = alloca $ \globPtr -> do
     c_globfree globPtr
     return res
 
--- Like glob, but for multiple patterns.
--- This function only marshals data once, making it more efficient than multiple glob calls.
-globMany :: [GlobFlag] -> [String] -> IO [FilePath]
+-- | Like glob, but matches against multiple patterns.
+--   This function only allocates and marshals data once, making it more efficient than multiple glob calls.
+globMany :: [GlobFlag]      -- ^ A list of control flags to apply.
+         -> [String]        -- ^ A list of patterns to apply.
+         -> IO [FilePath]   -- ^ The paths matching the patterns.
 globMany _ [] = return []       -- Need to handle this explicitly, or we'll free an uninitiallized glob_t.
 globMany flags (p0:ps) =
     let flags' = orFlags flags

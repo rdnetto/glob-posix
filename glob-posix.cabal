@@ -1,7 +1,8 @@
 name:                glob-posix
 version:             0.1.0.0
 synopsis:            Haskell bindings for POSIX glob library.
-description:         Please see README.md
+description:         Wrapper for the glob(3) function. The key functions are glob and globMany.
+                     GNU extensions are supported but contained in a different module to encourage portability.
 homepage:            https://github.com/rdnetto/glob-posix#readme
 license:             Apache
 license-file:        LICENSE
