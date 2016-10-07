@@ -35,6 +35,17 @@ test-suite glob-posix-test
                        unix
   default-language:    Haskell2010
 
+benchmark glob-posix-bench
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      bench
+  main-is:             Bench.hs
+  build-depends:       base,
+                       criterion,
+                       MissingH,
+                       Glob,
+                       glob-posix
+  default-language:    Haskell2010
+
 
 source-repository head
   type:     git
