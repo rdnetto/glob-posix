@@ -18,6 +18,7 @@ cabal.sandbox.config
 .stack-work/
 cabal.project.local
 .HTF/
+glob-posix-bench
 
 # Haddock generates these for some reason...
 src/highlight.js

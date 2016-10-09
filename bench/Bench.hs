@@ -12,10 +12,7 @@ main = defaultMain [
   where
       cases glob = [
               bench "Simple path"     . whnfIO $ glob "/usr/bin",
-              bench "Python versions" . whnfIO $ glob pythonVers,
-              bench "Python site"     . whnfIO $ glob pythonSite
+              bench "Python versions" . whnfIO $ glob "/usr/lib/python?.?",
+              bench "Python site"     . whnfIO $ glob "/usr/lib/python?.?/site-packages/test"
           ]
-
-      pythonVers = "/usr/lib/python?.?"
-      pythonSite = "/usr/lib/python?.?/site-packages/test"
 
