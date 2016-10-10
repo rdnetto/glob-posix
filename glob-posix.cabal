@@ -16,7 +16,8 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     System.Directory.Glob,
-                       System.Directory.Glob.GNU
+                       System.Directory.Glob.GNU,
+                       System.Directory.Glob.GNU.Compat
   other-modules:       System.Directory.Glob.Internal
   build-depends:       base >= 4.7 && < 5
   default-language:    Haskell2010
