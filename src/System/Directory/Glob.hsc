@@ -11,7 +11,9 @@ This module provides a wrapper around the <https://linux.die.net/man/3/glob glob
 All of the standard flags are supported, though GNU extensions are contained in the "System.Directory.Glob.GNU" module to encourage portability.
 -}
 module System.Directory.Glob (
+    (<>),
     glob,
+    globDefaults,
     globMany,
     GlobFlag,
     -- Only export standard flags by default
@@ -23,8 +25,8 @@ module System.Directory.Glob (
 
 import Control.Exception (bracket)
 import Control.Monad (unless, forM_)
-import Data.Bits ((.|.))
 import Data.List (foldl')
+import Data.Monoid ((<>))
 import Foreign (alloca, free, peekArray)
 import Foreign.C.String (CString, newCString, peekCString, withCString)
 import Foreign.C.Types (CInt(..))
@@ -36,20 +38,20 @@ import System.Directory.Glob.Internal
 
 
 -- Each call to glob() involves String marshalling and return code checking
-c_glob' :: Ptr CGlob -> CInt -> String -> IO ()
-c_glob' globPtr f p = withCString p $ \p' -> do
+c_glob' :: Ptr CGlob -> GlobFlag -> String -> IO ()
+c_glob' globPtr (GlobFlag f) p = withCString p $ \p' -> do
     errCode <- c_glob p' f nullPtr globPtr
 
     unless (errCode == 0 || errCode == (#const GLOB_NOMATCH))
         (error $ "glob failed with exit code: " ++ show errCode)
 
 -- | Finds pathnames matching a pattern. e.g @foo*@, @prog_v?@, @ba[zr]@, etc.
-glob :: [GlobFlag]      -- ^ A list of control flags to apply.
+glob :: GlobFlag        -- ^ The control flags to apply.
      -> String          -- ^ The pattern.
      -> IO [FilePath]   -- ^ The paths matching the pattern.
 glob flags pat = alloca $ \globPtr -> do
     -- Call glob
-    c_glob' globPtr (orFlags flags) pat
+    c_glob' globPtr flags pat
 
     -- Unpack results
     CGlob strs <- peek globPtr
@@ -61,35 +63,24 @@ glob flags pat = alloca $ \globPtr -> do
 
 -- | Like glob, but matches against multiple patterns.
 --   This function only allocates and marshals data once, making it more efficient than multiple glob calls.
-globMany :: [GlobFlag]      -- ^ A list of control flags to apply.
+globMany :: GlobFlag        -- ^ The control flags to apply.
          -> [String]        -- ^ A list of patterns to apply.
          -> IO [FilePath]   -- ^ The paths matching the patterns.
 globMany _ [] = return []       -- Need to handle this explicitly, or we'll free an uninitiallized glob_t.
-globMany flags (p0:ps) =
-    let flags' = orFlags flags
-    in  alloca $ \globPtr -> do
-            -- First call to glob must be *without* GLOB_APPEND
-            let flags' = orFlags flags
-            c_glob' globPtr flags' p0
+globMany flags (p0:ps) = alloca $ \globPtr -> do
+    -- First call to glob must be *without* GLOB_APPEND
+    c_glob' globPtr flags p0
 
-            -- Call glob for the remaining patterns with GLOB_APPEND
-            forM_ ps . c_glob' globPtr $ flags' .|. unwrapFlag globAppend
+    -- Call glob for the remaining patterns with GLOB_APPEND
+    forM_ ps . c_glob' globPtr $ flags <> globAppend
 
-            -- Unpack paths
-            CGlob strs <- peek globPtr
-            res <- mapM peekCString strs
+    -- Unpack paths
+    CGlob strs <- peek globPtr
+    res <- mapM peekCString strs
 
-            -- Cleanup
-            c_globfree globPtr
-            return res
-
--- Helper function that ORs the flags together.
-orFlags :: [GlobFlag] -> CInt
-orFlags = foldl' (.|.) 0 . map unwrapFlag
-
-unwrapFlag :: GlobFlag -> CInt
-unwrapFlag (GlobFlag f) = f
-
+    -- Cleanup
+    c_globfree globPtr
+    return res
 
 {-
     typedef struct {

@@ -1,5 +1,3 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
-
 {-|
 Module      : System.Directory.Glob.Internal
 Copyright   : (c) Reuben D'Netto 2016
@@ -9,12 +7,26 @@ Portability : POSIX
 -}
 module System.Directory.Glob.Internal where
 
+import Data.Bits ((.|.))
+import Data.Monoid ((<>))
 import Foreign.C.Types (CInt(..))
+
 #include <glob.h>
 
 
--- | Control flags for glob. See <https://linux.die.net/man/3/glob man glob(3)> for more information.
-data GlobFlag = GlobFlag CInt
+-- | Control flags for glob. Use 'globDefaults' if you have no special requirements.
+--   To combine multiple flags, use the '<>' operator (re-exported here for convenience).
+--   See <https://linux.die.net/man/3/glob man glob(3)> for more information.
+data GlobFlag = GlobFlag !CInt
+
+-- | Default value - equivalent to 0 for the C function.
+globDefaults = GlobFlag 0
+
+instance Monoid GlobFlag where
+    mempty = globDefaults
+    mappend (GlobFlag a) (GlobFlag b) = GlobFlag (a .|. b)
+
+
 -- | Used for mutation of an existing structure - for internal use only.
 #enum GlobFlag, GlobFlag, GLOB_APPEND
 -- | Append a @/@ to each entry that is the path of a directory.

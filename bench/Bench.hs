@@ -5,7 +5,7 @@ import System.Path.Glob as MH           -- MissingH
 
 main :: IO ()
 main = defaultMain [
-        bgroup "glob-posix" $ cases (GP.glob []),
+        bgroup "glob-posix" $ cases (GP.glob GP.globDefaults),
         bgroup "MissingH" $ cases MH.glob,
         bgroup "Glob" $ cases G.glob
     ]

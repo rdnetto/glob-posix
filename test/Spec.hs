@@ -31,49 +31,49 @@ main = do
 posixTests :: FilePath -> [TestTree]
 posixTests tmp = [
     testCase "Basic case" $
-        glob [] "/usr/bin" !@?= ["/usr/bin"],
+        glob globDefaults "/usr/bin" !@?= ["/usr/bin"],
 
     testCase "Non-existant path" $
-        glob [] "/foo" !@?= [],
+        glob globDefaults "/foo" !@?= [],
 
     testCase "globMany" . withTempFile "foo" $ \f1 ->
         withTempFile "bar" $ \f2 ->
-            globMany [] [tmp </> "foo", tmp </> "bar"] !@?= [f1, f2],
+            globMany globDefaults [tmp </> "foo", tmp </> "bar"] !@?= [f1, f2],
 
     testCase "GLOB_MARK" $
-        glob [globMark] "/usr/bin" !@?= ["/usr/bin/"],
+        glob globMark "/usr/bin" !@?= ["/usr/bin/"],
 
     testCase "GLOB_NOCHECK" $
-        glob [globNoCheck] "/foo" !@?= ["/foo"],
+        glob globNoCheck "/foo" !@?= ["/foo"],
 
     testCase "GLOB_ESCAPE" . withTempFile "a?b" $ \f ->
-        glob [] (tmp </> "a\\?b") !@?= [f],
+        glob globDefaults (tmp </> "a\\?b") !@?= [f],
 
     testCase "GLOB_NOESCAPE" . withTempFile "a\\?b" $ \f ->
-        glob [globNoEscape] (tmp </> "a\\?b") !@?= [f]
+        glob globNoEscape (tmp </> "a\\?b") !@?= [f]
 
     ]
 
 gnuTests :: FilePath -> [TestTree]
 gnuTests tmp = [
     testCase "GLOB_NOMAGIC" $
-        glob [globNoMagic] "/foo" !@?= ["/foo"],
+        glob globNoMagic "/foo" !@?= ["/foo"],
 
 
     testCase "GLOB_PERIOD" . withTempFile ".ab" $ \f -> do
-        glob []           (tmp </> "?ab") !@?= []
-        glob [globPeriod] (tmp </> "?ab") !@?= [f],
+        glob globDefaults           (tmp </> "?ab") !@?= []
+        glob globPeriod (tmp </> "?ab") !@?= [f],
 
     testCase "GLOB_BRACE" . withTempFile "foo" $ \f1 ->
         withTempFile "far" $ \f2 -> do
-            glob []          (tmp </> "f{oo,ar}") !@?= []
-            glob [globBrace] (tmp </> "f{oo,ar}") !@?= [f1, f2],
+            glob globDefaults          (tmp </> "f{oo,ar}") !@?= []
+            glob globBrace (tmp </> "f{oo,ar}") !@?= [f1, f2],
 
     testCase "GLOB_TILDE" $ do
         h <- getHomeDirectory
         user <- getUserName
-        glob []          ('~':user) !@?= []
-        glob [globTilde] ('~':user) !@?= [h]
+        glob globDefaults          ('~':user) !@?= []
+        glob globTilde ('~':user) !@?= [h]
 
     ]
 
