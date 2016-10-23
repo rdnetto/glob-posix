@@ -9,9 +9,9 @@ They can be used to defer the failure to runtime, when you wish to avoid adding 
 -}
 module System.Directory.Glob.GNU.Compat where
 
+#ifndef linux_HOST_OS
 import System.Directory.Glob.Internal (GlobFlag)
 
-#ifndef linux_HOST_OS
 globBrace, globNoMagic, globOnlyDir, globPeriod, globTilde, globTildeCheck :: GlobFlag
 globBrace      = error "Unsupported: GLOB_BRACE is a GNU extension"
 globNoMagic    = error "Unsupported: GLOB_NOMAGIC is a GNU extension"

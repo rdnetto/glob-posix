@@ -23,14 +23,12 @@ module System.Directory.Glob (
     globNoSort
     ) where
 
-import Control.Exception (bracket)
 import Control.Monad (unless, forM_)
-import Data.List (foldl')
 import Data.Monoid ((<>))
-import Foreign (alloca, free, peekArray)
-import Foreign.C.String (CString, newCString, peekCString, withCString)
+import Foreign (alloca, peekArray)
+import Foreign.C.String (CString, peekCString, withCString)
 import Foreign.C.Types (CInt(..))
-import Foreign.Ptr (Ptr(..), nullPtr)
+import Foreign.Ptr (Ptr, nullPtr)
 import Foreign.Storable (Storable(..))
 
 import System.Directory.Glob.Internal

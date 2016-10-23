@@ -1,7 +1,7 @@
 import Criterion.Main
-import System.Directory.Glob as GP      -- glob-posix
-import System.FilePath.Glob as G        -- Glob
-import System.Path.Glob as MH           -- MissingH
+import qualified System.Directory.Glob as GP      -- glob-posix
+import qualified System.FilePath.Glob as G        -- Glob
+import qualified System.Path.Glob as MH           -- MissingH
 
 main :: IO ()
 main = defaultMain [
