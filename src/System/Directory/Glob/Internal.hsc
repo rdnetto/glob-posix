@@ -20,11 +20,15 @@ import Foreign.C.Types (CInt(..))
 data GlobFlag = GlobFlag !CInt
 
 -- | Default value - equivalent to 0 for the C function.
+globDefaults :: GlobFlag
 globDefaults = GlobFlag 0
+
+
+instance Semigroup GlobFlag where
+    (GlobFlag a) <> (GlobFlag b) = GlobFlag (a .|. b)
 
 instance Monoid GlobFlag where
     mempty = globDefaults
-    mappend (GlobFlag a) (GlobFlag b) = GlobFlag (a .|. b)
 
 
 -- | Used for mutation of an existing structure - for internal use only.

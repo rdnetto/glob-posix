@@ -10,7 +10,6 @@ import Test.Tasty.HUnit
 
 import System.Directory.Glob
 import System.Directory.Glob.GNU
-import System.Directory.Glob.GNU.Compat
 
 
 main :: IO ()
@@ -95,17 +94,6 @@ withTempFile f cb = do
         (createFile f')
         (removeFile f')
         (cb f')
-
--- Creates a temporary directory that we can't read from.
--- Used for testing error handling.
-withUnreadableDir :: (FilePath -> IO a) -> IO a
-withUnreadableDir cb = do
-    fp <- (</> "foo") <$> getTemporaryDirectory
-
-    bracket_
-        (createDirectory fp >> setPermissions fp emptyPermissions)
-        (setPermissions fp emptyPermissions {writable = True} >> removeDirectory fp)
-        (cb fp)
 
 -- Gets the username of the current user
 -- We can't use getLoginName here because it requires a controlling tty
