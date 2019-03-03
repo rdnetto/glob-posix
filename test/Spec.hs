@@ -10,6 +10,7 @@ import Test.Tasty.HUnit
 
 import System.Directory.Glob
 import System.Directory.Glob.GNU
+import System.Directory.Glob.GNU.Compat         -- Needed on OSX
 
 
 main :: IO ()
